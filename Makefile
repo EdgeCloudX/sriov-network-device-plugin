@@ -18,7 +18,13 @@ BINARY_NAME=sriovdp
 PACKAGE=sriov-network-device-plugin
 ORG_PATH=github.com/k8snetworkplumbingwg
 # Build info
-BUILDDIR=$(CURDIR)/build
+# BUILDDIR=$(CURDIR)/build
+REGISTRY ?= cloudx2021
+DOCKER_PLATFORMS ?= linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le,linux/s390x
+DOCKER_IMAGE_NAME ?= sriov-network-device-plugin
+DOCKER_IMAGE_TAG ?= v3.5.1
+
+BUILDDIR=$(BASE)/build
 REPO_PATH=$(ORG_PATH)/$(PACKAGE)
 BASE=$(GOPATH)/src/$(REPO_PATH)
 PKGS = $(or $(PKG),$(shell cd $(BASE) && env GOPATH=$(GOPATH) go list ./... | grep -v "^$(PACKAGE)/vendor/"))
@@ -93,6 +99,13 @@ $(GO2XUNIT): | $(BASE) ; $(info  building go2xunit...)
 
 $(GOMOCKERY): | $(BASE) ; $(info  building go2xunit...)
 	$Q go install github.com/vektra/mockery/v2@latest
+
+.PHONY: buildx-push
+buildx-push:
+	# So we can push to docker hub by setting REGISTRY
+	# Build should be cached from build-container
+	docker buildx create --use
+	docker buildx build --push --platform $(DOCKER_PLATFORMS) -t $(REGISTRY)/$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG) .
 
 TEST_TARGETS := test-default test-bench test-short test-verbose test-race
 .PHONY: $(TEST_TARGETS) test-xml check test tests
